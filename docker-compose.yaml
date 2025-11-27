@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go_gin_app
+    ports:
+      - "8080:8080"
+    environment:
+      # IMPORTANT: DB_HOST must be 'db' (the service name) for the Go app to connect
+      DB_HOST: s1.harimalam.in
+      DB_PORT: 5432
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: gin_db
+      SSL_MODE: disable
+      JWT_SECRET: your_32_byte_secret_key_here_abcd
+      APP_PORT: 8080
