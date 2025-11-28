@@ -50,7 +50,7 @@ func (s *authService) Login(req LoginRequest) (string, error) {
 	if !CheckPasswordHash(req.Password, user.PasswordHash) {
 		return "", ErrInvalidCredentials
 	}
-	token, err := GenerateToken(user, []byte(s.Cfg.JWTSecret))
+	token, err := GenerateToken(user, []byte(s.Cfg.App.JWTSecret))
 	if err != nil {
 		return "", err
 	}

@@ -13,20 +13,20 @@ import (
 
 func main() {
 	// Load configuration
-	cfg, err := config.LoadConfig()
+	Cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load configuration: %v", err)
 	}
 
 	// Database setup
-	database, err := db.InitDB(cfg)
+	database, err := db.InitDB(Cfg)
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
 	// Auth setup
 	authRepo := auth.NewRepository(database)
-	authService := auth.NewService(authRepo, cfg)
+	authService := auth.NewService(authRepo, Cfg)
 	authHandler := auth.NewHandler(authService)
 
 	// Albums setup
@@ -46,12 +46,12 @@ func main() {
 
 	// PROTECTED ROUTES
 	protectedGroup := apiGroup.Group("/")
-	protectedGroup.Use(middleware.AuthMiddleware([]byte(cfg.JWTSecret)))
+	protectedGroup.Use(middleware.AuthMiddleware([]byte(Cfg.App.JWTSecret)))
 	{
 		albumHandler.RegisterRoutes(protectedGroup)
 	}
 
 	// 4. Start HTTP server.
-	port := ":" + cfg.DBPort
+	port := ":" + Cfg.App.Port
 	router.Run(port)
 }

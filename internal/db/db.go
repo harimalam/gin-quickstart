@@ -5,6 +5,7 @@ import (
 	"gin-quickstart/internal/albums"
 	"gin-quickstart/internal/auth"
 	"gin-quickstart/internal/config"
+	"log"
 	"strings"
 
 	"gorm.io/driver/postgres"
@@ -12,15 +13,15 @@ import (
 )
 
 // InitDB initializes the GORM database connection and runs migrations.
-func InitDB(cfg config.Config) (*gorm.DB, error) {
+func InitDB(Cfg config.Config) (*gorm.DB, error) {
 	// Construct the PostgreSQL DSN (Data Source Name) string
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		cfg.DBHost,
-		cfg.DBUser,
-		strings.TrimSpace(cfg.DBPassword),
-		cfg.DBName,
-		cfg.DBPort,
-		strings.TrimSpace(cfg.SSLMode),
+		Cfg.DB.Host,
+		Cfg.DB.User,
+		strings.TrimSpace(Cfg.DB.Password),
+		Cfg.DB.Name,
+		Cfg.DB.Port,
+		strings.TrimSpace(Cfg.DB.SSLMode),
 	)
 	// Open and connect to the PostgreSQL database using GORM.
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -29,6 +30,8 @@ func InitDB(cfg config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println("💾 Database connection established successfully.")
 
 	// Run AutoMigrate for the models.Album struct.
 	if err := db.AutoMigrate(

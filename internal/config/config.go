@@ -1,90 +1,115 @@
 package config
 
 import (
-	"errors" // Added for explicit validation errors
+	"errors"
 	"log"
-	"time" // Added for time.Duration
+	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
-// Config holds all application configuration values.
-// The flat structure is used for guaranteed compatibility with your environment variables.
-type Config struct {
-	// Application Settings
-	Port         string        `mapstructure:"APP_PORT"`
-	JWTSecret    string        `mapstructure:"JWT_SECRET"`
-	ReadTimeout  time.Duration `mapstructure:"READ_TIMEOUT"`  // Standard practice for server configuration
-	WriteTimeout time.Duration `mapstructure:"WRITE_TIMEOUT"` // Standard practice for server configuration
+// Mappers for ENV to nested config keys
+var mappers = map[string]string{
+	// App Configs
+	"APP_PORT":      "app.port",
+	"JWT_SECRET":    "app.jwt_secret",
+	"GIN_MODE":      "app.gin_mode",
+	"READ_TIMEOUT":  "app.read_timeout",
+	"WRITE_TIMEOUT": "app.write_timeout",
 
-	// Database Settings
-	DBHost     string `mapstructure:"DB_HOST"`
-	DBPort     string `mapstructure:"DB_PORT"`
-	DBUser     string `mapstructure:"DB_USER"`
-	DBPassword string `mapstructure:"DB_PASSWORD"`
-	DBName     string `mapstructure:"DB_NAME"`
-	SSLMode    string `mapstructure:"SSL_MODE"`
+	// DB Configs
+	"DB_HOST":     "db.host",
+	"DB_PORT":     "db.port",
+	"DB_USER":     "db.user",
+	"DB_PASSWORD": "db.password",
+	"DB_NAME":     "db.name",
+	"SSL_MODE":    "db.ssl_mode",
 }
 
-// LoadConfig reads configuration from file or environment variables.
-// It applies defaults, reads from the environment, and performs critical validation.
-func LoadConfig() (config Config, err error) {
-	// 1. Set Defaults (Robustness and Predictability)
-	viper.SetDefault("APP_PORT", "8080")
-	viper.SetDefault("READ_TIMEOUT", 5*time.Second)
-	viper.SetDefault("WRITE_TIMEOUT", 10*time.Second)
-	viper.SetDefault("SSL_MODE", "disable")
-	// Set an insecure default and rely on validation/warning if it's not changed
-	viper.SetDefault("JWT_SECRET", "change-me-in-production-1234567890123456")
+type AppConfig struct {
+	Port         string        `mapstructure:"port"`
+	JWTSecret    string        `mapstructure:"jwt_secret"`
+	GinMode      string        `mapstructure:"gin_mode"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+}
 
-	// 2. Configure file search (for local .env)
-	viper.AddConfigPath(".")
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
+type DBConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Name     string `mapstructure:"name"`
+	SSLMode  string `mapstructure:"ssl_mode"`
+}
 
-	// 3. Instruct Viper to read from OS environment (Critical for Docker)
-	viper.AutomaticEnv()
+type Config struct {
+	App AppConfig `mapstructure:"app"`
+	DB  DBConfig  `mapstructure:"db"`
+}
 
-	// 4. CRITICAL: Explicitly bind ALL environment variables.
-	// This is the most reliable method for Docker to ensure environment variables are picked up.
-	_ = viper.BindEnv("DB_HOST")
-	_ = viper.BindEnv("DB_PORT")
-	_ = viper.BindEnv("DB_USER")
-	_ = viper.BindEnv("DB_PASSWORD")
-	_ = viper.BindEnv("DB_NAME")
-	_ = viper.BindEnv("SSL_MODE")
-	_ = viper.BindEnv("APP_PORT", "PORT")
-	_ = viper.BindEnv("JWT_SECRET")
-	_ = viper.BindEnv("READ_TIMEOUT")
-	_ = viper.BindEnv("WRITE_TIMEOUT")
+func LoadConfig() (cfg Config, err error) {
+	v := viper.New()
 
-	// 5. Read the configuration file (optional)
-	err = viper.ReadInConfig()
-	if err != nil {
+	// ---- 1. System ENV must be readable ----
+	v.AutomaticEnv()
+
+	// ---- 2. Force ENV format: APP_PORT, DB_USER etc ----
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// ---- 3. Read .env file if available (optional) ----
+	v.AddConfigPath(".")
+	v.SetConfigName(".env")
+	v.SetConfigType("env")
+
+	if err = v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// File not found is OK, rely on environment/defaults
-			log.Println("Configuration file not found, relying on environment variables and defaults.")
+			log.Println("⚠️ .env file not found, using system ENV only")
 		} else {
-			// Malformed file is critical
-			return Config{}, err
+			return cfg, err
+		}
+	} else {
+		log.Println("📌 Loaded .env file:", v.ConfigFileUsed())
+	}
+
+	// ---- 4. Map flat ENV → Nested keys manually (Reliable Fix) ----
+
+	for envKey, viperKey := range mappers {
+		if val := v.GetString(envKey); val != "" {
+			v.Set(viperKey, val)
 		}
 	}
 
-	// 6. Unmarshal values into the struct
-	if err = viper.Unmarshal(&config); err != nil {
-		return Config{}, err
+	// ---- 5. Set duration defaults properly for nested keys ----
+	if !v.IsSet("app.read_timeout") {
+		v.Set("app.read_timeout", 5*time.Second)
+	}
+	if !v.IsSet("app.write_timeout") {
+		v.Set("app.write_timeout", 10*time.Second)
+	}
+	if !v.IsSet("db.port") {
+		v.Set("db.port", "5432")
+	}
+	if !v.IsSet("db.ssl_mode") {
+		v.Set("db.ssl_mode", "disable")
+	}
+	if !v.IsSet("app.port") {
+		v.Set("app.port", "8080")
+	}
+	if !v.IsSet("app.gin_mode") {
+		v.Set("app.gin_mode", "debug")
 	}
 
-	// 7. 🛑 MANDATORY VALIDATION (Fail Fast Principle)
-	// Check for critical database settings. The application cannot run without these.
-	if config.DBUser == "" || config.DBPassword == "" || config.DBName == "" || config.DBHost == "" {
-		return Config{}, errors.New("missing critical database credentials (DB_USER, DB_PASSWORD, DB_NAME, or DB_HOST is empty)")
+	// ---- 6. Unmarshal into nested struct ----
+	if err = v.Unmarshal(&cfg); err != nil {
+		return cfg, err
 	}
 
-	// Warn if using the insecure default JWT secret
-	if config.JWTSecret == "change-me-in-production-1234567890123456" {
-		log.Println("⚠️ WARNING: JWT_SECRET is using the insecure default. Please set a unique JWT_SECRET environment variable.")
+	// ---- 7. Validate critical DB creds ----
+	if cfg.DB.User == "" || cfg.DB.Password == "" || cfg.DB.Name == "" {
+		return cfg, errors.New("missing DB_USER, DB_PASSWORD or DB_NAME")
 	}
-
-	return config, nil
+	log.Println("⚙️ Config loaded successfully (Nested struct + ENV mode)")
+	return cfg, nil
 }
