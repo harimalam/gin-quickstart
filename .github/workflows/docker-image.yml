@@ -41,3 +41,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+          # Use GitHub Actions Cache to speed up subsequent builds
+          cache-from: type=gha # Use GitHub Actions Cache to pull layers
+          cache-to: type=gha,mode=max # Store the built layers to GitHub Actions Cache
