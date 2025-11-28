@@ -28,5 +28,10 @@ WORKDIR /root/
 # Copy the binary from the builder stage
 COPY --from=builder /goapp .
 
+# Expose the application port and set environment variables
+ENV PORT=8080
+ENV GIN_MODE=release
+EXPOSE 8080
+
 # Set the entry point to run the compiled application
 CMD ["./goapp"]

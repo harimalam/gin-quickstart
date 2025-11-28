@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: go_gin_app
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -14,5 +14,3 @@ services:
       DB_NAME: ${DB_NAME}
       SSL_MODE: ${SSL_MODE}
       JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: ${APP_PORT}
-      GIN_MODE: ${GIN_MODE}
