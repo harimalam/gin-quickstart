@@ -5,6 +5,7 @@ import (
 	"gin-quickstart/internal/albums"
 	"gin-quickstart/internal/auth"
 	"gin-quickstart/internal/config"
+	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,10 +17,10 @@ func InitDB(cfg config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.DBHost,
 		cfg.DBUser,
-		cfg.DBPassword,
+		strings.TrimSpace(cfg.DBPassword),
 		cfg.DBName,
 		cfg.DBPort,
-		cfg.SSLMode,
+		strings.TrimSpace(cfg.SSLMode),
 	)
 	// Open and connect to the PostgreSQL database using GORM.
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

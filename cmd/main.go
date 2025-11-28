@@ -52,6 +52,6 @@ func main() {
 	}
 
 	// 4. Start HTTP server.
-	port := ":" + cfg.Port
+	port := ":" + cfg.DBPort
 	router.Run(port)
 }
