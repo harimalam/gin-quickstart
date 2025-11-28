@@ -28,8 +28,5 @@ WORKDIR /root/
 # Copy the binary from the builder stage
 COPY --from=builder /goapp .
 
-# Copy the .env file (for configuration)
-COPY .env .
-
 # Set the entry point to run the compiled application
 CMD ["./goapp"]
