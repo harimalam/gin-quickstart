@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"gin-quickstart/internal/auth"
 	"net/http"
 	"strings"
@@ -45,9 +44,6 @@ func Authorize(requiredRole string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied. Claims malformed."})
 			return
 		}
-		fmt.Println("claimRaw", claimsRaw)
-		fmt.Println("claims: ", claims)
-		fmt.Println("requiredRole: ", requiredRole)
 
 		// 3. Check for role match
 		if claims.Role != requiredRole {
