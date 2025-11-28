@@ -7,13 +7,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # IMPORTANT: DB_HOST must be 'db' (the service name) for the Go app to connect
-      DB_HOST: s1.harimalam.in
-      DB_PORT: 5432
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NAME: gin_db
-      SSL_MODE: disable
-      JWT_SECRET: your_32_byte_secret_key_here_abcd
-      APP_PORT: 8080
-      GIN_MODE: release
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      SSL_MODE: ${SSL_MODE}
+      JWT_SECRET: ${JWT_SECRET}
+      APP_PORT: ${APP_PORT}
+      GIN_MODE: ${GIN_MODE}
